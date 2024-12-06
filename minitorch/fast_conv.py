@@ -91,24 +91,27 @@ def _tensor_conv1d(
     s2 = weight_strides
 
     # TODO: Implement for Task 4.1.
-    for b in prange(batch):
-        for oc in prange(out_channels):
-            for w in prange(out_width):
-                out_index: Index = np.array([b, oc, w], np.int32)
-                o = index_to_position(out_index, out_strides)
-                out[o] = 0
-                for ic in range(in_channels):
-                    for k in range(kw):
-                        if reverse:
-                            i = w - k
-                        else:
-                            i = w + k
-                        if i >= 0 and i < width:
-                            input_index: Index = np.array([b, ic, i], np.int32)
-                            in_pos = index_to_position(input_index, input_strides)
-                            weight_index: Index = np.array([oc, ic, k], np.int32)
-                            w_pos = index_to_position(weight_index, weight_strides)
-                            out[o] += input[in_pos] * weight[w_pos]
+    for out_ord in prange(out_size):
+        out_index: Index = np.zeros(len(out_shape), np.int32)
+        to_index(out_ord, out_shape, out_index)
+        b, oc, w = out_index
+        o = index_to_position(out_index, out_strides)
+        out[o] = 0
+        
+        input_index: Index = np.array([b, 0, 0], np.int32)
+        in_pos_start = index_to_position(input_index, s1)
+        weight_index = np.array([oc, 0, 0], np.int32)
+        w_pos_start = index_to_position(weight_index, s2)
+        for ic in prange(in_channels):
+            for k in prange(kw):
+                if reverse:
+                    i = w - k
+                else:
+                    i = w + k
+                if i >= 0 and i < width:
+                    in_pos = in_pos_start + ic * s1[1] + i * s1[2]
+                    w_pos = w_pos_start + ic * s2[1] + k * s2[2]
+                    out[o] += input[in_pos] * weight[w_pos]
                             
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
@@ -237,7 +240,30 @@ def _tensor_conv2d(
     s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
     # TODO: Implement for Task 4.2.
-    raise NotImplementedError("Need to implement for Task 4.2")
+    for out_ord in prange(out_size):
+        out_index: Index = np.zeros(len(out_shape), np.int32)
+        to_index(out_ord, out_shape, out_index)
+        b, oc, h, w = out_index
+        o = index_to_position(out_index, out_strides)
+        out[o] = 0
+        
+        input_index: Index = np.array([b, 0, 0, 0], np.int32)
+        in_pos_start = index_to_position(input_index, s1)
+        weight_index: Index = np.array([oc, 0, 0, 0], np.int32)
+        w_pos_start = index_to_position(weight_index, s2)
+        for ic in prange(in_channels):
+            for k_w in prange(kw):
+                for k_h in prange(kh):
+                    if reverse:
+                        i = h - k_h
+                        j = w - k_w
+                    else:
+                        i = h + k_h
+                        j = w + k_w
+                    if i >= 0 and i < height and j >= 0 and j < width:
+                        in_pos = in_pos_start + ic * s11 + i * s12 + j * s13
+                        w_pos = w_pos_start + ic * s21 + k_h * s22 + k_w * s23
+                        out[o] += input[in_pos] * weight[w_pos]
 
 
 tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)
