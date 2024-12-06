@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 
 def make_pts(N: int) -> List[Tuple[float, float]]:
+    """Generate N random points in the unit square."""
     X = []
     for i in range(N):
         x_1 = random.random()
@@ -21,6 +22,17 @@ class Graph:
 
 
 def simple(N: int) -> Graph:
+    """Generate a simple dataset.
+
+    Args:
+    ----
+        N (int): Number of points to generate.
+
+    Returns:
+    -------
+        Graph: A simple dataset.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -30,6 +42,17 @@ def simple(N: int) -> Graph:
 
 
 def diag(N: int) -> Graph:
+    """Generates a graph where the labels are based on a diagonal decision boundary.
+
+    Args:
+    ----
+        N (int): The number of points to generate for the graph.
+
+    Returns:
+    -------
+        Graph: A graph object containing N points, their coordinates, and labels.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -39,6 +62,17 @@ def diag(N: int) -> Graph:
 
 
 def split(N: int) -> Graph:
+    """Generates a graph where the labels are based on a vertical split decision boundary.
+
+    Args:
+    ----
+        N (int): The number of points to generate for the graph.
+
+    Returns:
+    -------
+        Graph: A graph object containing N points, their coordinates, and labels.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -48,6 +82,17 @@ def split(N: int) -> Graph:
 
 
 def xor(N: int) -> Graph:
+    """Generates a graph where the labels are based on an XOR decision boundary.
+
+    Args:
+    ----
+        N (int): The number of points to generate for the graph.
+
+    Returns:
+    -------
+        Graph: A graph object containing N points, their coordinates, and labels.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -57,6 +102,17 @@ def xor(N: int) -> Graph:
 
 
 def circle(N: int) -> Graph:
+    """Generates a graph where the labels are based on a circular decision boundary of radius 0.1 centered at (0.5, 0.5).
+
+    Args:
+    ----
+        N (int): The number of points to generate for the graph.
+
+    Returns:
+    -------
+        Graph: A graph object containing N points, their coordinates, and labels.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -67,6 +123,18 @@ def circle(N: int) -> Graph:
 
 
 def spiral(N: int) -> Graph:
+    """Generates a graph where the points are arranged in a spiral pattern.
+
+    Args:
+    ----
+        N (int): The number of points to generate for the graph.
+
+    Returns:
+    -------
+        Graph: A graph object containing N points, their coordinates, and labels.
+
+    """
+
     def x(t: float) -> float:
         return t * math.cos(t) / 20.0
 
