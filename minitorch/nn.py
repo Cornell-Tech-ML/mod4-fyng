@@ -46,6 +46,24 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     )
 
 # TODO: Implement for Task 4.3.
+class Max(Function):
+    @staticmethod
+    def forward(ctx, input: Tensor, dim: int) -> Tensor:
+        # Save the dimension for the backward pass
+        ctx.save_for_backward(input.shape, dim)
+        # Compute the max
+        return map(operators.max, input)
+
+    @staticmethod
+    def backward(ctx, grad_output: Tensor) -> Tensor:
+        # Retrieve the dimension
+        shape, dim = ctx.saved_values
+        # Compute the gradient
+        return grad_output
+    
+    
+    
+
 def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     """Apply average pooling over a tensor
 
@@ -64,3 +82,76 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     reshaped_input, new_height, new_width = tile(input, kernel)
     
     return reshaped_input.mean(dim=5).view(batch, channel, new_height, new_width, kh).mean(dim=4).view(batch, channel, new_height, new_width)
+
+
+def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
+    """Apply max pooling over a tensor
+
+    Args:
+    ----
+        input: batch x channel x height x width
+        kernel: height x width of pooling
+
+    Returns:
+    -------
+        Tensor of size batch x channel x new_height x new_width
+
+    """
+    batch, channel, _, _ = input.shape
+    kh, kw = kernel
+    reshaped_input, new_height, new_width = tile(input, kernel)
+    
+    return reshaped_input.max(dim=5).values.view(batch, channel, new_height, new_width, kh).max(dim=4).values.view(batch, channel, new_height, new_width)
+
+
+def dropout(input: Tensor, p: float, ignore: bool = False) -> Tensor:
+    """Apply dropout to a tensor
+
+    Args:
+    ----
+        input: batch x channel x height x width
+        p: probability of dropout
+        ignore: ignore dropout (for testing)
+
+    Returns:
+    -------
+        Tensor of size batch x channel x height x width
+
+    """
+    if ignore:
+        return input
+    else:
+        return input * (rand(input.shape) > p)
+    
+    
+def softmax(input: Tensor, dim: int) -> Tensor:
+    """Apply softmax to a tensor
+
+    Args:
+    ----
+        input: batch x channel x height x width
+        dim: dimension to apply softmax
+
+    Returns:
+    -------
+        Tensor of size batch x channel x height x width
+
+    """
+    return input.exp() / input.exp().sum(dim=dim)
+
+
+def logsoftmax(input: Tensor, dim: int) -> Tensor:
+    """Apply log softmax to a tensor
+
+    Args:
+    ----
+        input: batch x channel x height x width
+        dim: dimension to apply log softmax
+
+    Returns:
+    -------
+        Tensor of size batch x channel x height x width
+
+    """
+    max_val = input.max(dim=dim)
+    return input - max_val - (input - max_val).exp().sum(dim=dim).log()
