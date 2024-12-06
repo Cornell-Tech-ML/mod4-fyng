@@ -353,19 +353,19 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
 
     # TODO: Implement for Task 3.3.
     if i < size:
-        cache[pos] = a[i]
+        cache[pos] = float(a[i])
         cuda.syncthreads()
-        max_pos = min(BLOCK_DIM, size - cuda.blockIdx.x * BLOCK_DIM) + 1
-        span = 2
-        while span < max_pos:
-            if pos % span == 0:
-                next = pos + span // 2
-                cache[pos] += cache[next]
-            span *= 2
-            cuda.syncthreads()
+    else:
+        cache[pos] = 0.0
+        
+    if i < size:
+        for j in [1, 2, 4, 8, 16]: # just hardcode this lol
+            if pos % (j * 2) == 0:
+                cache[pos] += cache[pos + j]
+                cuda.syncthreads()
         if pos == 0:
             out[cuda.blockIdx.x] = cache[0]
-
+            
 
 jit_sum_practice = cuda.jit()(_sum_practice)
 
@@ -426,28 +426,27 @@ def tensor_reduce(
         pos = cuda.threadIdx.x
 
         # TODO: Implement for Task 3.3.
-        reduce_dim_local = reduce_dim
+        cache[pos] = reduce_value
         if out_pos < out_size:
             to_index(out_pos, out_shape, out_index)
             o = index_to_position(out_index, out_strides)
-            if pos < a_shape[reduce_dim_local]:
-                out_index[reduce_dim_local] = pos
+            
+            out_index[reduce_dim] = out_index[reduce_dim] * BLOCK_DIM + pos
+            if out_index[reduce_dim] < a_shape[reduce_dim]:
                 a = index_to_position(out_index, a_strides)
                 cache[pos] = a_storage[a]
-            else:
-                cache[pos] = reduce_value
-            cuda.syncthreads()
-            span = 2
-            while span < BLOCK_DIM + 1:
-                if pos % span == 0:
-                    next = pos + span // 2
-                    cache[pos] = fn(cache[pos], cache[next])
-                span *= 2
                 cuda.syncthreads()
+                x = 0
+                while 2**x < BLOCK_DIM:
+                    j = 2**x
+                    if pos % (2 * j) == 0:
+                        cache[pos] = fn(cache[pos], cache[pos + j])
+                        cuda.syncthreads()
+                    x += 1
             if pos == 0:
                 out[o] = cache[0]
 
-    return jit(_reduce)  # type: ignore
+    return cuda.jit()(_reduce)  # type: ignore
 
 
 def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
@@ -505,7 +504,7 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
         out[idx] = acc
 
 
-jit_mm_practice = jit(_mm_practice)
+jit_mm_practice = cuda.jit()(_mm_practice)
 
 
 def mm_practice(a: Tensor, b: Tensor) -> TensorData:
@@ -586,37 +585,33 @@ def _tensor_matrix_multiply(
 
     acc = 0.0  # accumulator for matmul results. One per thread
     # Move across shared dimension by block dim.
-    for chunk in range(0, a_shape[-1], BLOCK_DIM):
+    for chunk in range(0, a_shape[2], BLOCK_DIM):
         # Each thread performs up to BLOCK_DIM iterations
         # of loading into shared memory
-        for offset in range(BLOCK_DIM):
-            k = chunk + offset
-            # load from a_shared into shared memory if thread is within bounds
-            # else load 0.0 as placeholder
-            if i < out_shape[-2] and k < a_shape[-1]:
-                a_shared[pi, pj] = a_storage[
-                    a_strides[-2] * i + a_strides[-1] * k + batch * a_batch_stride
-                ]
-            else:
-                a_shared[pi, pj] = 0.0
-            # load from b_shared into shared memory if thread is within bounds
-            # else load 0.0 as placeholder
-            if j < out_shape[-1] and k < b_shape[-2]:
-                b_shared[pi, pj] = b_storage[
-                    b_strides[-2] * k + b_strides[-1] * j + batch * b_batch_stride
-                ]
-            else:
-                b_shared[pi, pj] = 0.0
-            cuda.syncthreads()  # wait for all threads to finish copying before calculations can proceed
-            acc += (
-                a_shared[pi, offset] * b_shared[offset, pj]
-            )  # each thread computes a single element of the matmul and add to its own accumulator
-        cuda.syncthreads()  # all threads must finish computing before moving to the next chunk
+        k = chunk + pj
+        # load from a_shared into shared memory if thread is within bounds
+        # else load 0.0 as placeholder
+        if i < a_shape[1] and k < a_shape[2]:
+            a_shared[pi, pj] = a_storage[
+                a_strides[1] * i + a_strides[2] * k + batch * a_batch_stride
+            ]
+        k = chunk + pi
+        # load from b_shared into shared memory if thread is within bounds
+        # else load 0.0 as placeholder
+        if j < b_shape[2] and k < b_shape[1]:
+            b_shared[pi, pj] = b_storage[
+                b_strides[1] * k + b_strides[2] * j + batch * b_batch_stride
+            ]
+        cuda.syncthreads()  # wait for all threads to finish copying before calculations can proceed
+        
+        for k in range(BLOCK_DIM):
+            if (chunk + k) < a_shape[2]:
+                acc += a_shared[pi, k] * b_shared[k, pj]  # each thread computes a single element of the matmul and add to its own accumulator
 
     # write to global memory if thread is within bounds
-    if i < out_shape[-2] and j < out_shape[-1]:
+    if i < out_shape[1] and j < out_shape[2]:
         # single write from accumulator to global memory
-        out[out_strides[-2] * i + out_strides[-1] * j + batch * out_strides[0]] += acc
+        out[out_strides[1] * i + out_strides[2] * j + batch * out_strides[0]] = acc
 
 
-tensor_matrix_multiply = jit(_tensor_matrix_multiply)
+tensor_matrix_multiply = cuda.jit(_tensor_matrix_multiply)
