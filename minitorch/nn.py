@@ -45,24 +45,6 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
         new_width,
     )
 
-# TODO: Implement for Task 4.3.
-class Max(Function):
-    @staticmethod
-    def forward(ctx, input: Tensor, dim: int) -> Tensor:
-        # Save the dimension for the backward pass
-        ctx.save_for_backward(input.shape, dim)
-        # Compute the max
-        return map(operators.max, input)
-
-    @staticmethod
-    def backward(ctx, grad_output: Tensor) -> Tensor:
-        # Retrieve the dimension
-        shape, dim = ctx.saved_values
-        # Compute the gradient
-        return grad_output
-    
-    
-    
 
 def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     """Apply average pooling over a tensor
@@ -84,24 +66,63 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     return reshaped_input.mean(dim=5).view(batch, channel, new_height, new_width, kh).mean(dim=4).view(batch, channel, new_height, new_width)
 
 
-def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
-    """Apply max pooling over a tensor
+max_reduce = FastOps.reduce(operators.max, -1e9)
+
+
+def argmax(input: Tensor, dim: int) -> Tensor:
+    """Compute the argmax as a 1-hot tensor.
 
     Args:
     ----
-        input: batch x channel x height x width
-        kernel: height x width of pooling
+        input : input tensor
+        dim : dimension to apply argmax
 
     Returns:
     -------
-        Tensor of size batch x channel x new_height x new_width
+        :class:`Tensor` : tensor with 1 on highest cell in dim, 0 otherwise
 
     """
-    batch, channel, _, _ = input.shape
-    kh, kw = kernel
-    reshaped_input, new_height, new_width = tile(input, kernel)
+    out = max_reduce(input, dim)
+    return out == input
+
+
+class Max(Function):
+    @staticmethod
+    def forward(ctx: Context, input: Tensor, dim: Tensor) -> Tensor:
+        "Forward of max should be max reduction"
+        ctx.save_for_backward(input, dim)
+        return max_reduce(input, int(dim.item()))
+        
+    @staticmethod
+    def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
+        "Backward of max should be argmax (see above)"
+        input, dim = ctx.saved_values
+        return argmax(input, dim) * grad_output, 0.0
+        
+
+def max(input: Tensor, dim: int) -> Tensor:
+    return Max.apply(input, input._ensure_tensor(dim))
+
+
+# def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
+#     """Apply max pooling over a tensor
+
+#     Args:
+#     ----
+#         input: batch x channel x height x width
+#         kernel: height x width of pooling
+
+#     Returns:
+#     -------
+#         Tensor of size batch x channel x new_height x new_width
+
+#     """
+#     batch, channel, _, _ = input.shape
+#     kh, kw = kernel
+#     reshaped_input, new_height, new_width = tile(input, kernel)
     
-    return reshaped_input.max(dim=5).values.view(batch, channel, new_height, new_width, kh).max(dim=4).values.view(batch, channel, new_height, new_width)
+#     x = max(reshaped_input, 5).view(batch, channel, new_height, new_width, kh)
+#     return max(x, 4).view(batch, channel, new_height, new_width)
 
 
 def dropout(input: Tensor, p: float, ignore: bool = False) -> Tensor:
@@ -153,5 +174,5 @@ def logsoftmax(input: Tensor, dim: int) -> Tensor:
         Tensor of size batch x channel x height x width
 
     """
-    max_val = input.max(dim=dim)
+    max_val = max(input, dim)
     return input - max_val - (input - max_val).exp().sum(dim=dim).log()
