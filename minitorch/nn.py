@@ -89,40 +89,42 @@ def argmax(input: Tensor, dim: int) -> Tensor:
 class Max(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor, dim: Tensor) -> Tensor:
-        "Forward of max should be max reduction"
+        """Max reduction over a dimension of a tensor."""
         ctx.save_for_backward(input, dim)
         return max_reduce(input, int(dim.item()))
         
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
-        "Backward of max should be argmax (see above)"
+        """Backward of max is argmax."""
         input, dim = ctx.saved_values
-        return argmax(input, dim) * grad_output, 0.0
+        return argmax(input, int(dim.item())) * grad_output, 0.0
         
 
 def max(input: Tensor, dim: int) -> Tensor:
+    """Apply max reduction over a dimension of a tensor."""
     return Max.apply(input, input._ensure_tensor(dim))
 
 
-# def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
-#     """Apply max pooling over a tensor
+def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
+    """Apply max pooling over a tensor
 
-#     Args:
-#     ----
-#         input: batch x channel x height x width
-#         kernel: height x width of pooling
+    Args:
+    ----
+        input: batch x channel x height x width
+        kernel: height x width of pooling
 
-#     Returns:
-#     -------
-#         Tensor of size batch x channel x new_height x new_width
+    Returns:
+    -------
+        Tensor of size batch x channel x new_height x new_width
 
-#     """
-#     batch, channel, _, _ = input.shape
-#     kh, kw = kernel
-#     reshaped_input, new_height, new_width = tile(input, kernel)
+    """
+    batch, channel, _, _ = input.shape
+    kh, kw = kernel
+    reshaped_input, new_height, new_width = tile(input, kernel)
     
-#     x = max(reshaped_input, 5).view(batch, channel, new_height, new_width, kh)
-#     return max(x, 4).view(batch, channel, new_height, new_width)
+    x = max(reshaped_input, 5).view(batch, channel, new_height, new_width, kh)
+    x = max(x, 4).view(batch, channel, new_height, new_width)
+    return x
 
 
 def dropout(input: Tensor, p: float, ignore: bool = False) -> Tensor:

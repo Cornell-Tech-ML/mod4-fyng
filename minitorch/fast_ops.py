@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar, Any
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 from numba import prange
@@ -290,20 +290,20 @@ def tensor_reduce(
         reduce_dim: int,
     ) -> None:
         # TODO: Implement for Task 3.1.
-        reduce_size = a_shape[reduce_dim]
-        reduce_stride = a_strides[reduce_dim]
         for i in prange(len(out)):
             out_index: Index = np.empty(MAX_DIMS, np.int32)
-            to_index(i, out_shape, out_index)
+            reduce_size = a_shape[reduce_dim]
+            to_index(i, out_shape,out_index)
             out_pos = index_to_position(out_index, out_strides)
             accum = out[out_pos]
             a_pos = index_to_position(out_index, a_strides)
+            step = a_strides[reduce_dim]
             for j in range(reduce_size):
-                accum = fn(out[out_pos], a_storage[a_pos])
-                a_pos += reduce_stride
+                accum = fn(accum, a_storage[a_pos])
+                a_pos += step
             out[out_pos] = accum
 
-    return njit(_reduce,parallel=True)  # type: ignore
+    return njit(_reduce, parallel=True)  # type: ignore
 
 
 def _tensor_matrix_multiply(

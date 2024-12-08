@@ -32,15 +32,17 @@ def test_avg(t: Tensor) -> None:
 @given(tensors(shape=(2, 3, 4)))
 def test_max(t: Tensor) -> None:
     # TODO: Implement for Task 4.4.
-    raise NotImplementedError("Need to implement for Task 4.4")
-
+    out = minitorch.max(t, 2)    
+    for i in range(2):
+        for j in range(3):
+            assert_close(out[i, j, 0], max(t[i, j, k] for k in range(4)))
+    minitorch.grad_check(lambda t: minitorch.max(t, 2), t)
+    
 
 @pytest.mark.task4_4
 @given(tensors(shape=(1, 1, 4, 4)))
 def test_max_pool(t: Tensor) -> None:
     out = minitorch.maxpool2d(t, (2, 2))
-    print(out)
-    print(t)
     assert_close(
         out[0, 0, 0, 0], max([t[0, 0, i, j] for i in range(2) for j in range(2)])
     )
