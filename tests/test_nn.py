@@ -32,6 +32,8 @@ def test_avg(t: Tensor) -> None:
 @given(tensors(shape=(2, 3, 4)))
 def test_max(t: Tensor) -> None:
     # TODO: Implement for Task 4.4.
+    # add small random noise to avoid duplicates
+    t += minitorch.rand(t.shape) * 1e-3
     out = minitorch.max(t, 2)    
     for i in range(2):
         for j in range(3):
