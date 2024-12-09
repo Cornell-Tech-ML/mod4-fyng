@@ -285,7 +285,7 @@ if __name__ == "__main__":
         validation_size,
     )    
     model_trainer = SentenceSentimentTrain(
-        CNNSentimentKim(feature_map_size=100, filter_sizes=[3, 4, 5], dropout=0.25)
+        CNNSentimentKim(feature_map_size=100, filter_sizes=[3, 4, 5], dropout=0.1)
     )
     model_trainer.train(
         (X_train, y_train),

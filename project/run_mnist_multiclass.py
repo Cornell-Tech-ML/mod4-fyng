@@ -39,10 +39,18 @@ class Conv2d(minitorch.Module):
         super().__init__()
         self.weights = RParam(out_channels, in_channels, kh, kw)
         self.bias = RParam(out_channels, 1, 1)
+        self.out_channels = out_channels
 
-    def forward(self, input):
+    def forward(self, input: minitorch.Tensor):
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        batch, in_channels, height, width = input.shape     
+        out = input.zeros((batch, self.out_channels, height, width))
+        minitorch.tensor_conv2d(
+            *out.tuple(), out.size,
+            *input.tuple(), *self.weights.value.tuple(),
+            reverse=False
+            )
+        return out + self.bias.value
 
 
 class Network(minitorch.Module):
@@ -68,12 +76,21 @@ class Network(minitorch.Module):
         self.out = None
 
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        self.conv1 = Conv2d(1, 4, 3, 3)
+        self.conv2 = Conv2d(4, 8, 3, 3)
+        self.linear1 = Linear(392, 64)
+        self.linear2 = Linear(64, C)
 
     def forward(self, x):
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
-
+        batch, _, _, _ = x.shape
+        x = self.conv1(x).relu()
+        x = self.conv2(x).relu()
+        x = minitorch.avgpool2d(x, (4, 4)).view(batch, 392)
+        x = self.linear1(x).relu()
+        x = minitorch.dropout(x, 0.25)
+        return minitorch.logsoftmax(self.linear2(x), 1)
+        
 
 def make_mnist(start, stop):
     ys = []
@@ -171,4 +188,4 @@ class ImageTrain:
 
 if __name__ == "__main__":
     data_train, data_val = (make_mnist(0, 5000), make_mnist(10000, 10500))
-    ImageTrain().train(data_train, data_val, learning_rate=0.01)
+    ImageTrain().train(data_train, data_val, learning_rate=0.003)
