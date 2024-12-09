@@ -88,8 +88,9 @@ class CNNSentimentKim(minitorch.Module):
         x = minitorch.max(self.conv1(emb).relu(), 2).view(batch, self.feature_map_size)
         y = minitorch.max(self.conv2(emb).relu(), 2).view(batch, self.feature_map_size)
         z = minitorch.max(self.conv3(emb).relu(), 2).view(batch, self.feature_map_size)
-        out = self.linear(x + y + z).relu()
-        return minitorch.dropout(out, self.dropout).sigmoid()
+        out = self.linear(x + y + z)
+        ignore_dropout = not self.training
+        return minitorch.dropout(out, self.dropout, ignore=ignore_dropout).sigmoid()
 
 
 # Evaluation helper methods
@@ -285,7 +286,7 @@ if __name__ == "__main__":
         validation_size,
     )    
     model_trainer = SentenceSentimentTrain(
-        CNNSentimentKim(feature_map_size=100, filter_sizes=[3, 4, 5], dropout=0.1)
+        CNNSentimentKim(feature_map_size=100, filter_sizes=[3, 4, 5], dropout=0.25)
     )
     model_trainer.train(
         (X_train, y_train),
