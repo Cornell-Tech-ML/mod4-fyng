@@ -7,7 +7,6 @@ from numba import njit as _njit
 from .autodiff import Context
 from .tensor import Tensor
 from .tensor_data import (
-    MAX_DIMS,
     Index,
     Shape,
     Strides,
@@ -97,7 +96,7 @@ def _tensor_conv1d(
         b, oc, w = out_index
         o = index_to_position(out_index, out_strides)
         out[o] = 0
-        
+
         input_index: Index = np.array([b, 0, 0], np.int32)
         in_pos_start = index_to_position(input_index, s1)
         weight_index = np.array([oc, 0, 0], np.int32)
@@ -112,7 +111,7 @@ def _tensor_conv1d(
                     in_pos = in_pos_start + ic * s1[1] + i * s1[2]
                     w_pos = w_pos_start + ic * s2[1] + k * s2[2]
                     out[o] += input[in_pos] * weight[w_pos]
-                            
+
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
 
@@ -246,7 +245,7 @@ def _tensor_conv2d(
         b, oc, h, w = out_index
         o = index_to_position(out_index, out_strides)
         out[o] = 0
-        
+
         input_index: Index = np.array([b, 0, 0, 0], np.int32)
         in_pos_start = index_to_position(input_index, s1)
         weight_index: Index = np.array([oc, 0, 0, 0], np.int32)

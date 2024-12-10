@@ -43,7 +43,7 @@ class Conv2d(minitorch.Module):
 
     def forward(self, input: minitorch.Tensor):
         # TODO: Implement for Task 4.5.
-        batch, in_channels, height, width = input.shape     
+        batch, in_channels, height, width = input.shape
         out = input.zeros((batch, self.out_channels, height, width))
         minitorch.tensor_conv2d(
             *out.tuple(), out.size,
@@ -91,7 +91,7 @@ class Network(minitorch.Module):
         ignore_dropout = not self.training
         x = minitorch.dropout(x, 0.25, ignore_dropout)
         return minitorch.logsoftmax(self.linear2(x), 1)
-        
+
 
 def make_mnist(start, stop):
     ys = []
@@ -112,8 +112,8 @@ def default_log_fn(epoch, total_loss, correct, total, losses, model):
 def save_log_to_file(epoch, total_loss, correct, total):
     with open("mnist.txt", "a") as f:
         f.write(f"Epoch {epoch} loss {total_loss} valid acc {correct}/{total}\n")
-        
-        
+
+
 class ImageTrain:
     def __init__(self):
         self.model = Network()

@@ -4,7 +4,7 @@ from . import operators
 from .autodiff import Context
 from .fast_ops import FastOps
 from .tensor import Tensor
-from .tensor_functions import Function, rand, tensor
+from .tensor_functions import Function, rand
 
 
 # List of functions in this file:
@@ -40,7 +40,9 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     new_width = width // kw
 
     return (
-        input.contiguous().view(batch, channel, new_height, kh, new_width, kw).permute(0, 1, 2, 4, 3, 5),
+        input.contiguous()
+        .view(batch, channel, new_height, kh, new_width, kw)
+        .permute(0, 1, 2, 4, 3, 5),
         new_height,
         new_width,
     )
@@ -62,8 +64,13 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     batch, channel, _, _ = input.shape
     kh, kw = kernel
     reshaped_input, new_height, new_width = tile(input, kernel)
-    
-    return reshaped_input.mean(dim=5).view(batch, channel, new_height, new_width, kh).mean(dim=4).view(batch, channel, new_height, new_width)
+
+    return (
+        reshaped_input.mean(dim=5)
+        .view(batch, channel, new_height, new_width, kh)
+        .mean(dim=4)
+        .view(batch, channel, new_height, new_width)
+    )
 
 
 max_reduce = FastOps.reduce(operators.max, -1e9)
@@ -92,7 +99,7 @@ class Max(Function):
         """Max reduction over a dimension of a tensor."""
         ctx.save_for_backward(input, dim)
         return max_reduce(input, int(dim.item()))
-        
+
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
         """Backward of max is argmax. If multiple max values, pick one."""
@@ -121,7 +128,7 @@ def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     batch, channel, _, _ = input.shape
     kh, kw = kernel
     reshaped_input, new_height, new_width = tile(input, kernel)
-    
+
     x = max(reshaped_input, 5).view(batch, channel, new_height, new_width, kh)
     x = max(x, 4).view(batch, channel, new_height, new_width)
     return x
@@ -145,8 +152,8 @@ def dropout(input: Tensor, p: float, ignore: bool = False) -> Tensor:
         return input
     else:
         return input * (rand(input.shape) > p)
-    
-    
+
+
 def softmax(input: Tensor, dim: int) -> Tensor:
     """Apply softmax to a tensor
 

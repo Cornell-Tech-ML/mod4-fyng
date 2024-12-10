@@ -357,15 +357,15 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
         cuda.syncthreads()
     else:
         cache[pos] = 0.0
-        
+
     if i < size:
-        for j in [1, 2, 4, 8, 16]: # just hardcode this lol
+        for j in [1, 2, 4, 8, 16]:  # just hardcode this lol
             if pos % (j * 2) == 0:
                 cache[pos] += cache[pos + j]
                 cuda.syncthreads()
         if pos == 0:
             out[cuda.blockIdx.x] = cache[0]
-            
+
 
 jit_sum_practice = cuda.jit()(_sum_practice)
 
@@ -430,7 +430,7 @@ def tensor_reduce(
         if out_pos < out_size:
             to_index(out_pos, out_shape, out_index)
             o = index_to_position(out_index, out_strides)
-            
+
             out_index[reduce_dim] = out_index[reduce_dim] * BLOCK_DIM + pos
             if out_index[reduce_dim] < a_shape[reduce_dim]:
                 a = index_to_position(out_index, a_strides)
@@ -603,10 +603,12 @@ def _tensor_matrix_multiply(
                 b_strides[1] * k + b_strides[2] * j + batch * b_batch_stride
             ]
         cuda.syncthreads()  # wait for all threads to finish copying before calculations can proceed
-        
+
         for k in range(BLOCK_DIM):
             if (chunk + k) < a_shape[2]:
-                acc += a_shared[pi, k] * b_shared[k, pj]  # each thread computes a single element of the matmul and add to its own accumulator
+                acc += (
+                    a_shared[pi, k] * b_shared[k, pj]
+                )  # each thread computes a single element of the matmul and add to its own accumulator
 
     # write to global memory if thread is within bounds
     if i < out_shape[1] and j < out_shape[2]:

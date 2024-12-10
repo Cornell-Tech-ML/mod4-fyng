@@ -170,7 +170,7 @@ class SentenceSentimentTrain:
                 )
                 x = minitorch.tensor(
                     X_train[example_num : example_num + batch_size], backend=BACKEND
-                )                
+                )
                 x.requires_grad_(True)
                 y.requires_grad_(True)
                 # Forward
@@ -286,7 +286,7 @@ if __name__ == "__main__":
         embeddings.GloveEmbedding("wikipedia_gigaword", d_emb=50, show_progress=True),
         train_size,
         validation_size,
-    )    
+    )
     model_trainer = SentenceSentimentTrain(
         CNNSentimentKim(feature_map_size=100, filter_sizes=[3, 4, 5], dropout=0.25)
     )

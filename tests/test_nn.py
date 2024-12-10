@@ -34,12 +34,10 @@ def test_max(t: Tensor) -> None:
     # TODO: Implement for Task 4.4.
     # add small random noise to avoid duplicates
     # t = t + minitorch.rand(t.shape, requires_grad=True) * 1e-3
-    out = minitorch.max(t, 3)    
-    assert_close(
-        out[0, 0, 0, 0], max(t[0, 0, 0, k] for k in range(4))
-        )
+    out = minitorch.max(t, 3)
+    assert_close(out[0, 0, 0, 0], max(t[0, 0, 0, k] for k in range(4)))
     minitorch.grad_check(lambda t: minitorch.max(t, 3), t)
-    
+
 
 @pytest.mark.task4_4
 @given(tensors(shape=(1, 1, 4, 4)))
