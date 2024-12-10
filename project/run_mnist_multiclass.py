@@ -86,9 +86,10 @@ class Network(minitorch.Module):
         batch, _, _, _ = x.shape
         x = self.conv1(x).relu()
         x = self.conv2(x).relu()
-        x = minitorch.avgpool2d(x, (4, 4)).view(batch, 392)
+        x = minitorch.maxpool2d(x, (4, 4)).view(batch, 392)
         x = self.linear1(x).relu()
-        x = minitorch.dropout(x, 0.25)
+        ignore_dropout = not self.training
+        x = minitorch.dropout(x, 0.25, ignore_dropout)
         return minitorch.logsoftmax(self.linear2(x), 1)
         
 
@@ -108,6 +109,11 @@ def default_log_fn(epoch, total_loss, correct, total, losses, model):
     print(f"Epoch {epoch} loss {total_loss} valid acc {correct}/{total}")
 
 
+def save_log_to_file(epoch, total_loss, correct, total):
+    with open("mnist.txt", "a") as f:
+        f.write(f"Epoch {epoch} loss {total_loss} valid acc {correct}/{total}\n")
+        
+        
 class ImageTrain:
     def __init__(self):
         self.model = Network()
@@ -181,6 +187,7 @@ class ImageTrain:
                             if y[i, ind] == 1.0:
                                 correct += 1
                     log_fn(epoch, total_loss, correct, BATCH, losses, model)
+                    save_log_to_file(epoch, total_loss, correct, BATCH)
 
                     total_loss = 0.0
                     model.train()
@@ -188,4 +195,4 @@ class ImageTrain:
 
 if __name__ == "__main__":
     data_train, data_val = (make_mnist(0, 5000), make_mnist(10000, 10500))
-    ImageTrain().train(data_train, data_val, learning_rate=0.003)
+    ImageTrain().train(data_train, data_val, learning_rate=0.004)

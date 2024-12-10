@@ -90,7 +90,7 @@ class CNNSentimentKim(minitorch.Module):
         z = minitorch.max(self.conv3(emb).relu(), 2).view(batch, self.feature_map_size)
         out = self.linear(x + y + z)
         ignore_dropout = not self.training
-        return minitorch.dropout(out, self.dropout, ignore=ignore_dropout).sigmoid()
+        return minitorch.dropout(out, self.dropout, ignore_dropout).sigmoid()
 
 
 # Evaluation helper methods
@@ -276,8 +276,10 @@ def encode_sentiment_data(dataset, pretrained_embeddings, N_train, N_val=0):
 if __name__ == "__main__":
     train_size = 450
     validation_size = 100
-    learning_rate = 0.1
+    learning_rate = 0.01
     max_epochs = 250
+
+    print(learning_rate)
 
     (X_train, y_train), (X_val, y_val) = encode_sentiment_data(
         load_dataset("glue", "sst2"),
