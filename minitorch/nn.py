@@ -104,7 +104,9 @@ class Max(Function):
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
         """Backward of max is argmax. If multiple max values, pick one."""
         input, dim = ctx.saved_values
-        return argmax(input, int(dim.item())) * grad_output, 0.0
+        max_arg = argmax(input, int(dim.item()))
+        max_arg = max_arg / max_arg.sum(dim=dim)
+        return max_arg * grad_output, 0.0
 
 
 def max(input: Tensor, dim: int) -> Tensor:
