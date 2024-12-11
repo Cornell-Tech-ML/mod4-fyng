@@ -38,6 +38,17 @@ class ScalarFunction:
 
     @classmethod
     def apply(cls, *vals: ScalarLike) -> Scalar:
+        """Apply operation to scalar values.
+
+        Args:
+        ----
+            *vals: ScalarLike: A list of scalar values.
+
+        Returns:
+        -------
+            Scalar: return new scalar with the operation applied.
+
+        """
         raw_vals = []
         scalars = []
         for v in vals:
@@ -66,10 +77,12 @@ class Add(ScalarFunction):
 
     @staticmethod
     def forward(ctx: Context, a: float, b: float) -> float:
+        """Compute $f(x, y) = x + y$"""
         return a + b
 
     @staticmethod
     def backward(ctx: Context, d_output: float) -> Tuple[float, ...]:
+        """$f'_x(x, y) * d = d, f'_y(x, y) * d = d$"""
         return d_output, d_output
 
 
@@ -78,11 +91,13 @@ class Log(ScalarFunction):
 
     @staticmethod
     def forward(ctx: Context, a: float) -> float:
+        """Compute $f(x) = log(x)$"""
         ctx.save_for_backward(a)
         return operators.log(a)
 
     @staticmethod
     def backward(ctx: Context, d_output: float) -> float:
+        """Compute $f'(x) * d$ using `operators.log_back`"""
         (a,) = ctx.saved_values
         return operators.log_back(a, d_output)
 
@@ -90,3 +105,126 @@ class Log(ScalarFunction):
 # To implement.
 
 
+# TODO: Implement for Task 1.2.
+class Mul(ScalarFunction):
+    """Multiplication function $f(x, y) = x * y$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float, b: float) -> float:
+        """Compute $f(x, y) = x * y$"""
+        ctx.save_for_backward(a, b)
+        return a * b
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> Tuple[float, float]:
+        """$f'_x(x, y) * d = y * d, f'_y(x, y) * d = x * d$"""
+        a, b = ctx.saved_values
+        return b * d_output, a * d_output
+
+
+class Inv(ScalarFunction):
+    """Inverse function $f(x) = 1 / x$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Compute $f(x) = 1 / x$"""
+        ctx.save_for_backward(a)
+        return operators.inv(a)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """Compute $f'(x) * d$ using `operators.inv_back`"""
+        (a,) = ctx.saved_values
+        return operators.inv_back(a, d_output)
+
+
+class Neg(ScalarFunction):
+    """Negation function $f(x) = -x$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Compute $f(x) = -x$"""
+        return -a
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """$f'(x) * d = - d$"""
+        return -d_output
+
+
+class Sigmoid(ScalarFunction):
+    """Sigmoid function $f(x) = 1 / (1 + e^{-x})$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Compute $f(x) = 1 / (1 + e^{-x})$"""
+        out = operators.sigmoid(a)
+        ctx.save_for_backward(out)
+        return out
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """$f'(x) * d$ = $f(x) * (1 - f(x)) * d$"""
+        sigma: float = ctx.saved_values[0]
+        return sigma * (1.0 - sigma) * d_output
+
+
+class ReLU(ScalarFunction):
+    """Relu function $f(x) = max(0, x)$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Compute $f(x) = max(0, x)$"""
+        ctx.save_for_backward(a)
+        return operators.relu(a)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """Compute $f'(x) * d$ using `operators.relu_back`"""
+        (a,) = ctx.saved_values
+        return operators.relu_back(a, d_output)
+
+
+class Exp(ScalarFunction):
+    """Exponential function $f(x) = e^x$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Compute $f(x) = e^x$"""
+        out = operators.exp(a)
+        ctx.save_for_backward(out)
+        return out
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """$f'(x) * d = e^x * d$"""
+        out: float = ctx.saved_values[0]
+        return out * d_output
+
+
+class LT(ScalarFunction):
+    """Less than function $f(x, y) = x < y$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float, b: float) -> float:
+        """Compute $f(x, y) = x < y$"""
+        return 1.0 if a < b else 0.0
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> tuple[float, float]:
+        """Compute $f'(x) * d$ and $f'(y) * d$"""
+        return 0.0, 0.0
+
+
+class EQ(ScalarFunction):
+    """Equal function $f(x, y) = x == y$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float, b: float) -> float:
+        """Compute $f(x, y) = x == y$"""
+        return 1.0 if a == b else 0.0
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> tuple[float, float]:
+        """Compute $f'(x) * d$ and $f'(y) * d$"""
+        return 0.0, 0.0

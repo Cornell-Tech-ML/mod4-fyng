@@ -8,19 +8,19 @@ from datasets import load_dataset
 BACKEND = minitorch.TensorBackend(minitorch.FastOps)
 
 
-def RParam(*shape):
+def RParam(*shape) -> minitorch.Parameter:
     r = 0.1 * (minitorch.rand(shape, backend=BACKEND) - 0.5)
     return minitorch.Parameter(r)
 
 
 class Linear(minitorch.Module):
-    def __init__(self, in_size, out_size):
+    def __init__(self, in_size, out_size) -> None:
         super().__init__()
         self.weights = RParam(in_size, out_size)
         self.bias = RParam(out_size)
         self.out_size = out_size
 
-    def forward(self, x):
+    def forward(self, x: minitorch.Tensor) -> minitorch.Tensor:
         batch, in_size = x.shape
         return (
             x.view(batch, in_size) @ self.weights.value.view(in_size, self.out_size)
@@ -32,10 +32,20 @@ class Conv1d(minitorch.Module):
         super().__init__()
         self.weights = RParam(out_channels, in_channels, kernel_width)
         self.bias = RParam(1, out_channels, 1)
+        self.out_channels = out_channels
+        self.kernel_width = kernel_width
+        self.in_channels = in_channels
 
-    def forward(self, input):
+    def forward(self, input: minitorch.Tensor):
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        batch, in_channels, width = input.shape
+        out = input.zeros((batch, self.out_channels, width))
+        minitorch.tensor_conv1d(
+            *out.tuple(), out.size,
+            *input.tuple(), *self.weights.value.tuple(),
+            reverse=False
+            )
+        return out + self.bias.value
 
 
 class CNNSentimentKim(minitorch.Module):
@@ -62,14 +72,31 @@ class CNNSentimentKim(minitorch.Module):
         super().__init__()
         self.feature_map_size = feature_map_size
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        self.conv1 = Conv1d(embedding_size, feature_map_size, filter_sizes[0])
+        self.conv2 = Conv1d(embedding_size, feature_map_size, filter_sizes[1])
+        self.conv3 = Conv1d(embedding_size, feature_map_size, filter_sizes[2])
+        self.linear = Linear(feature_map_size, 1)
+        self.dropout = dropout
 
-    def forward(self, embeddings):
+    def forward(self, embeddings: minitorch.Tensor):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        batch, _, _ = embeddings.shape
+        emb = embeddings.permute(0, 2, 1)
+        x = minitorch.max(self.conv1(emb).relu(), 2).view(batch, self.feature_map_size)
+        y = minitorch.max(self.conv2(emb).relu(), 2).view(batch, self.feature_map_size)
+        z = minitorch.max(self.conv3(emb).relu(), 2).view(batch, self.feature_map_size)
+        out = x + y + z
+        out = minitorch.dropout(
+            out,
+            self.dropout,
+            not self.training
+        )
+        out = self.linear(out).relu()
+        out = out.sigmoid().view(batch)
+        return out
 
 
 # Evaluation helper methods
@@ -255,8 +282,10 @@ def encode_sentiment_data(dataset, pretrained_embeddings, N_train, N_val=0):
 if __name__ == "__main__":
     train_size = 450
     validation_size = 100
-    learning_rate = 0.01
+    learning_rate = 0.005
     max_epochs = 250
+
+    print(learning_rate)
 
     (X_train, y_train), (X_val, y_val) = encode_sentiment_data(
         load_dataset("glue", "sst2"),
