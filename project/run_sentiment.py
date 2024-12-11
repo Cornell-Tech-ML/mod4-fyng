@@ -8,19 +8,19 @@ from datasets import load_dataset
 BACKEND = minitorch.TensorBackend(minitorch.FastOps)
 
 
-def RParam(*shape):
+def RParam(*shape) -> minitorch.Parameter:
     r = 0.1 * (minitorch.rand(shape, backend=BACKEND) - 0.5)
     return minitorch.Parameter(r)
 
 
 class Linear(minitorch.Module):
-    def __init__(self, in_size, out_size):
+    def __init__(self, in_size, out_size) -> None:
         super().__init__()
         self.weights = RParam(in_size, out_size)
         self.bias = RParam(out_size)
         self.out_size = out_size
 
-    def forward(self, x):
+    def forward(self, x: minitorch.Tensor) -> minitorch.Tensor:
         batch, in_size = x.shape
         return (
             x.view(batch, in_size) @ self.weights.value.view(in_size, self.out_size)
@@ -88,9 +88,15 @@ class CNNSentimentKim(minitorch.Module):
         x = minitorch.max(self.conv1(emb).relu(), 2).view(batch, self.feature_map_size)
         y = minitorch.max(self.conv2(emb).relu(), 2).view(batch, self.feature_map_size)
         z = minitorch.max(self.conv3(emb).relu(), 2).view(batch, self.feature_map_size)
-        out = self.linear(x + y + z)
-        ignore_dropout = not self.training
-        return minitorch.dropout(out, self.dropout, ignore_dropout).sigmoid()
+        out = x + y + z
+        out = minitorch.dropout(
+            out,
+            self.dropout,
+            not self.training
+        )
+        out = self.linear(out).relu()
+        out = out.sigmoid().view(batch)
+        return out
 
 
 # Evaluation helper methods
@@ -276,7 +282,7 @@ def encode_sentiment_data(dataset, pretrained_embeddings, N_train, N_val=0):
 if __name__ == "__main__":
     train_size = 450
     validation_size = 100
-    learning_rate = 0.01
+    learning_rate = 0.005
     max_epochs = 250
 
     print(learning_rate)
