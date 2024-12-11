@@ -115,7 +115,7 @@ def default_log_fn(epoch, total_loss, correct, total, losses, model):
 
 
 def save_log_to_file(epoch, total_loss, correct, total):
-    with open("mnist.txt", "a") as f:
+    with open("mnist_new.txt", "a") as f:
         f.write(f"Epoch {epoch} loss {total_loss} valid acc {correct}/{total}\n")
 
 
@@ -200,5 +200,5 @@ class ImageTrain:
 
 if __name__ == "__main__":
     data_train, data_val = (make_mnist(0, 5000), make_mnist(10000, 10500))
-    ImageTrain().train(data_train, data_val, learning_rate=0.02)
+    ImageTrain().train(data_train, data_val, learning_rate=0.05)
  
