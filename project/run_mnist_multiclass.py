@@ -86,11 +86,16 @@ class Network(minitorch.Module):
         batch, _, _, _ = x.shape
         x = self.conv1(x).relu()
         x = self.conv2(x).relu()
-        x = minitorch.maxpool2d(x, (4, 4)).view(batch, 392)
+        x = minitorch.avgpool2d(x, (4, 4))
+        x = x.view(batch, 392)
         x = self.linear1(x).relu()
-        ignore_dropout = not self.training
-        x = minitorch.dropout(x, 0.25, ignore_dropout)
-        return minitorch.logsoftmax(self.linear2(x), 1)
+        x = minitorch.dropout(
+            x, 
+            0.25, 
+            not self.training)
+        x = self.linear2(x)
+        x = minitorch.logsoftmax(x, 1)
+        return x
 
 
 def make_mnist(start, stop):
@@ -122,7 +127,7 @@ class ImageTrain:
         return self.model.forward(minitorch.tensor([x], backend=BACKEND))
 
     def train(
-        self, data_train, data_val, learning_rate, max_epochs=500, log_fn=default_log_fn
+        self, data_train, data_val, learning_rate, max_epochs=50, log_fn=default_log_fn
     ):
         (X_train, y_train) = data_train
         (X_val, y_val) = data_val
@@ -195,4 +200,5 @@ class ImageTrain:
 
 if __name__ == "__main__":
     data_train, data_val = (make_mnist(0, 5000), make_mnist(10000, 10500))
-    ImageTrain().train(data_train, data_val, learning_rate=0.004)
+    ImageTrain().train(data_train, data_val, learning_rate=0.02)
+ 
