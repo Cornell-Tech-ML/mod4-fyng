@@ -90,8 +90,8 @@ class Network(minitorch.Module):
         x = x.view(batch, 392)
         x = self.linear1(x).relu()
         x = minitorch.dropout(
-            x, 
-            0.25, 
+            x,
+            0.25,
             not self.training)
         x = self.linear2(x)
         x = minitorch.logsoftmax(x, 1)
@@ -200,5 +200,4 @@ class ImageTrain:
 
 if __name__ == "__main__":
     data_train, data_val = (make_mnist(0, 5000), make_mnist(10000, 10500))
-    ImageTrain().train(data_train, data_val, learning_rate=0.05)
- 
+    ImageTrain().train(data_train, data_val, learning_rate=0.07)
